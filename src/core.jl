@@ -5,13 +5,11 @@
 # Further, it seems to be sufficient to overload `isequal` instead of also `Base.:(==)`, see:
 # https://stackoverflow.com/a/34939856/5377696; https://github.com/JuliaLang/julia/issues/12198#issuecomment-122938304
 # indicates the opposite...
-@recompile_invalidations begin
-    Base.hash(@nospecialize(cc::_CoreComponent)) = hash(cc.name::String)
-    Base.:(==)(@nospecialize(cc1::_CoreComponent), @nospecialize(cc2::_CoreComponent)) =
-        (cc1.name::String) == (cc2.name::String)
-    Base.isequal(@nospecialize(cc1::_CoreComponent), @nospecialize(cc2::_CoreComponent)) =
-        isequal(cc1.name::String, cc2.name::String)
-end
+Base.hash(@nospecialize(cc::_CoreComponent)) = hash(cc.name::String)
+Base.:(==)(@nospecialize(cc1::_CoreComponent), @nospecialize(cc2::_CoreComponent)) =
+    (cc1.name::String) == (cc2.name::String)
+Base.isequal(@nospecialize(cc1::_CoreComponent), @nospecialize(cc2::_CoreComponent)) =
+    isequal(cc1.name::String, cc2.name::String)
 
 # TODO: replace with https://github.com/KristofferC/TimerOutputs.jl
 """
@@ -117,18 +115,16 @@ include("core/virtual.jl")
 # _finalize_docstring(Unit)
 # _finalize_docstring(Virtual)
 
-@recompile_invalidations begin
-    function Base.show(io::IO, @nospecialize(cc::_CoreComponent))
-        str_show = """:: $(typeof(cc)) ::"""
+function Base.show(io::IO, @nospecialize(cc::_CoreComponent))
+    str_show = """:: $(typeof(cc)) ::"""
 
-        fields = _result_fields(cc)
-        for field in fields[1:(end - 1)]
-            str_show *= "\n├ $field: $(getfield(cc, field))"
-        end
-        str_show *= "\n└ $(fields[end]): $(getfield(cc, fields[end]))"
-
-        return print(io, str_show)
+    fields = _result_fields(cc)
+    for field in fields[1:(end - 1)]
+        str_show *= "\n├ $field: $(getfield(cc, field))"
     end
+    str_show *= "\n└ $(fields[end]): $(getfield(cc, fields[end]))"
+
+    return print(io, str_show)
 end
 
 # Here, empty implementations are done to ensure every core component type implements all necessary functionality, even
@@ -200,70 +196,68 @@ _build_priority(::Nothing, default) = default
 _build_priority(priority::Real, ::T) where {T} = convert(T, priority)
 _build_priority(priority, ::Any) = @error "Unsupported build priority" priority
 
-@recompile_invalidations begin
-    function Base.getproperty(@nospecialize(cc::_CoreComponent), field::Symbol)
-        try
-            (field == :var) && (return getfield(cc, :_ccoc).variables::_CoreComponentOptContainerDict)
-            (field == :con) && (return getfield(cc, :_ccoc).constraints::_CoreComponentOptContainerDict)
-            (field == :exp) && (return getfield(cc, :_ccoc).expressions::_CoreComponentOptContainerDict)
-            (field == :obj) && (return getfield(cc, :_ccoc).objectives::_CoreComponentOptContainerDict)
-            return getfield(cc, field)
-        catch e
-            @error "Field not found in _CoreComponent" e
-            return nothing
-        end
+function Base.getproperty(@nospecialize(cc::_CoreComponent), field::Symbol)
+    try
+        (field == :var) && (return getfield(cc, :_ccoc).variables::_CoreComponentOptContainerDict)
+        (field == :con) && (return getfield(cc, :_ccoc).constraints::_CoreComponentOptContainerDict)
+        (field == :exp) && (return getfield(cc, :_ccoc).expressions::_CoreComponentOptContainerDict)
+        (field == :obj) && (return getfield(cc, :_ccoc).objectives::_CoreComponentOptContainerDict)
+        return getfield(cc, field)
+    catch e
+        @error "Field not found in _CoreComponent" e
+        return nothing
     end
-
-    function Base.propertynames(@nospecialize(cc::_CoreComponent))
-        return (fieldnames(typeof(cc))..., :exp, :var, :con, :obj)
-    end
-
-    function Base.getproperty(ccocd::_CoreComponentOptContainerDict, field::Symbol)
-        try
-            return getfield(ccocd, :dict)[field]
-        catch e
-            @error "Field not found in _CoreComponentOptContainerDict" e
-            return nothing
-        end
-    end
-
-    function Base.setproperty!(ccocd::_CoreComponentOptContainerDict, field::Symbol, value)
-        return getfield(ccocd, :dict)[field] = value
-    end
-
-    function Base.setindex!(ccocd::_CoreComponentOptContainerDict, value, field::Symbol)
-        return getfield(ccocd, :dict)[field] = value
-    end
-
-    function Base.getindex(ccocd::_CoreComponentOptContainerDict, field::Symbol)
-        return getfield(ccocd, :dict)[field]
-    end
-
-    function Base.keys(ccocd::_CoreComponentOptContainerDict)
-        return keys(getfield(ccocd, :dict))
-    end
-
-    function Base.haskey(ccocd::_CoreComponentOptContainerDict, k::Symbol)
-        return haskey(getfield(ccocd, :dict), k)
-    end
-
-    # function Base.getproperty(ccoc::_CoreComponentOptContainer, field::Symbol)
-    #     (field == :var) && (return getfield(ccoc, :variables))
-    #     (field == :con) && (return getfield(ccoc, :constraints))
-    #     (field == :exp) && (return getfield(ccoc, :expressions))
-    #     (field == :obj) && (return getfield(ccoc, :objectives))
-
-    #     throw(ArgumentError("Field $field not found in _CoreComponentOptContainer"))
-    # end
-
-    # function Base.setproperty!(ccoc::_CoreComponentOptContainer, field::Symbol, value)
-    #     getfield(ccoc, :content)[field] = value
-    # end
-
-    # function Base.propertynames(ccoc::_CoreComponentOptContainer)
-    #     return propertynames(getfield(ccoc, :content))
-    # end
 end
+
+function Base.propertynames(@nospecialize(cc::_CoreComponent))
+    return (fieldnames(typeof(cc))..., :exp, :var, :con, :obj)
+end
+
+function Base.getproperty(ccocd::_CoreComponentOptContainerDict, field::Symbol)
+    try
+        return getfield(ccocd, :dict)[field]
+    catch e
+        @error "Field not found in _CoreComponentOptContainerDict" e
+        return nothing
+    end
+end
+
+function Base.setproperty!(ccocd::_CoreComponentOptContainerDict, field::Symbol, value)
+    return getfield(ccocd, :dict)[field] = value
+end
+
+function Base.setindex!(ccocd::_CoreComponentOptContainerDict, value, field::Symbol)
+    return getfield(ccocd, :dict)[field] = value
+end
+
+function Base.getindex(ccocd::_CoreComponentOptContainerDict, field::Symbol)
+    return getfield(ccocd, :dict)[field]
+end
+
+function Base.keys(ccocd::_CoreComponentOptContainerDict)
+    return keys(getfield(ccocd, :dict))
+end
+
+function Base.haskey(ccocd::_CoreComponentOptContainerDict, k::Symbol)
+    return haskey(getfield(ccocd, :dict), k)
+end
+
+# function Base.getproperty(ccoc::_CoreComponentOptContainer, field::Symbol)
+#     (field == :var) && (return getfield(ccoc, :variables))
+#     (field == :con) && (return getfield(ccoc, :constraints))
+#     (field == :exp) && (return getfield(ccoc, :expressions))
+#     (field == :obj) && (return getfield(ccoc, :objectives))
+
+#     throw(ArgumentError("Field $field not found in _CoreComponentOptContainer"))
+# end
+
+# function Base.setproperty!(ccoc::_CoreComponentOptContainer, field::Symbol, value)
+#     getfield(ccoc, :content)[field] = value
+# end
+
+# function Base.propertynames(ccoc::_CoreComponentOptContainer)
+#     return propertynames(getfield(ccoc, :content))
+# end
 
 @kwdef struct _CoreComponentOptResultContainer
     expressions = _CoreComponentOptContainerDict{Union{Float64, Vector{Float64}}}()
@@ -279,35 +273,33 @@ struct _CoreComponentResult <: _CoreComponent
     _ccorc::_CoreComponentOptResultContainer
 end
 
-@recompile_invalidations begin
-    function Base.show(io::IO, cc::_CoreComponentResult)
-        str_show = """:: CoreComponentResult (of $(cc.__type)) ::"""
+function Base.show(io::IO, cc::_CoreComponentResult)
+    str_show = """:: CoreComponentResult (of $(cc.__type)) ::"""
 
-        fields = cc.__fields
-        for field in fields[1:(end - 1)]
-            str_show *= "\n├ $field: $(getproperty(cc, field))"
-        end
-        str_show *= "\n└ $(fields[end]): $(getproperty(cc, fields[end]))"
-
-        return print(io, str_show)
+    fields = cc.__fields
+    for field in fields[1:(end - 1)]
+        str_show *= "\n├ $field: $(getproperty(cc, field))"
     end
+    str_show *= "\n└ $(fields[end]): $(getproperty(cc, fields[end]))"
 
-    function Base.getproperty(ccr::_CoreComponentResult, field::Symbol)
-        try
-            (field == :var) && (return getfield(ccr, :_ccorc).variables)
-            (field == :con) && (return getfield(ccr, :_ccorc).constraints)
-            (field == :exp) && (return getfield(ccr, :_ccorc).expressions)
-            (field == :obj) && (return getfield(ccr, :_ccorc).objectives)
-            (field == :res) && (return getfield(ccr, :_ccorc).results)
-            return getfield(ccr, :_info)[field]
-        catch e
-            @critical "Field not found in _CoreComponentResult" e
-        end
-    end
+    return print(io, str_show)
+end
 
-    function Base.propertynames(ccr::_CoreComponentResult)
-        return (propertynames(ccr)..., :exp, :var, :con, :obj, keys(getfield(ccr, :_info))...)
+function Base.getproperty(ccr::_CoreComponentResult, field::Symbol)
+    try
+        (field == :var) && (return getfield(ccr, :_ccorc).variables)
+        (field == :con) && (return getfield(ccr, :_ccorc).constraints)
+        (field == :exp) && (return getfield(ccr, :_ccorc).expressions)
+        (field == :obj) && (return getfield(ccr, :_ccorc).objectives)
+        (field == :res) && (return getfield(ccr, :_ccorc).results)
+        return getfield(ccr, :_info)[field]
+    catch e
+        @critical "Field not found in _CoreComponentResult" e
     end
+end
+
+function Base.propertynames(ccr::_CoreComponentResult)
+    return (propertynames(ccr)..., :exp, :var, :con, :obj, keys(getfield(ccr, :_info))...)
 end
 
 _hasexp(@nospecialize(cc::_CoreComponent), name::Symbol) =
@@ -449,31 +441,29 @@ function internal(model::JuMP.Model)
     return model.ext[:_iesopt]::InternalData
 end
 
-@recompile_invalidations begin
-    # TODO: remove this deprecation warning in the next "large" release
-    struct _IESoptDataDeprecator
-        model::JuMP.Model
-    end
+# TODO: remove this deprecation warning in the next "large" release
+struct _IESoptDataDeprecator
+    model::JuMP.Model
+end
 
-    function Base.getproperty(dd::_IESoptDataDeprecator, name::Symbol)
-        @error "`model.ext[:iesopt]` is deprecated, use `internal(model)` instead" maxlog = 1
-        return getfield(internal(getfield(dd, :model)), name)
-    end
+function Base.getproperty(dd::_IESoptDataDeprecator, name::Symbol)
+    @error "`model.ext[:iesopt]` is deprecated, use `internal(model)` instead" maxlog = 1
+    return getfield(internal(getfield(dd, :model)), name)
+end
 
-    function Base.setproperty!(dd::_IESoptDataDeprecator, name::Symbol, value)
-        @error "`model.ext[:iesopt]` is deprecated, use `internal(model)` instead" maxlog = 1
-        return setfield!(internal(getfield(dd, :model)), name, value)
-    end
+function Base.setproperty!(dd::_IESoptDataDeprecator, name::Symbol, value)
+    @error "`model.ext[:iesopt]` is deprecated, use `internal(model)` instead" maxlog = 1
+    return setfield!(internal(getfield(dd, :model)), name, value)
+end
 
-    function Base.getindex(dd::_IESoptDataDeprecator, key::Any)
-        @error "`model.ext[:iesopt]` is deprecated, use `internal(model)` instead" maxlog = 1
-        return internal(getfield(dd, :model))[key]
-    end
+function Base.getindex(dd::_IESoptDataDeprecator, key::Any)
+    @error "`model.ext[:iesopt]` is deprecated, use `internal(model)` instead" maxlog = 1
+    return internal(getfield(dd, :model))[key]
+end
 
-    function Base.setindex!(dd::_IESoptDataDeprecator, value::Any, key::Any)
-        @error "`model.ext[:iesopt]` is deprecated, use `internal(model)` instead" maxlog = 1
-        return internal(getfield(dd, :model))[key] = value
-    end
+function Base.setindex!(dd::_IESoptDataDeprecator, value::Any, key::Any)
+    @error "`model.ext[:iesopt]` is deprecated, use `internal(model)` instead" maxlog = 1
+    return internal(getfield(dd, :model))[key] = value
 end
 
 _iesopt_config(model::JuMP.Model) = internal(model).input.config::Dict{String, Dict{String, Any}}
@@ -537,26 +527,24 @@ function _is_cached(model::JuMP.Model, cache::Symbol, entry::Any)
 end
 _get_cached(model::JuMP.Model, cache::Symbol, entry::Any) = _iesopt_cache(model)[cache][entry]
 
-@recompile_invalidations begin
-    function Base.show(
-        io::IO,
-        item::Union{
-            InternalData,
-            _IESoptAuxiliaryData,
-            _IESoptDataDeprecator,
-            _IESoptInputData,
-            _IESoptModelData,
-            _IESoptResultData,
-        },
-    )
-        str_show = """:: $(typeof(item)) ::"""
+function Base.show(
+    io::IO,
+    item::Union{
+        InternalData,
+        _IESoptAuxiliaryData,
+        _IESoptDataDeprecator,
+        _IESoptInputData,
+        _IESoptModelData,
+        _IESoptResultData,
+    },
+)
+    str_show = """:: $(typeof(item)) ::"""
 
-        fields = fieldnames(typeof(item))
-        for field in fields[1:(end - 1)]
-            str_show *= "\n├ $field [$(typeof(getfield(item, field)))]"
-        end
-        str_show *= "\n└ $(fields[end]) [$(typeof(getfield(item, fields[end])))]"
-
-        return println(io, str_show)
+    fields = fieldnames(typeof(item))
+    for field in fields[1:(end - 1)]
+        str_show *= "\n├ $field [$(typeof(getfield(item, field)))]"
     end
+    str_show *= "\n└ $(fields[end]) [$(typeof(getfield(item, fields[end])))]"
+
+    return println(io, str_show)
 end

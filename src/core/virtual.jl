@@ -38,51 +38,49 @@ _setup!(::Virtual) = true
 
 _build_priority(::Virtual) = -1  # This means that `Virtual`s are not built.
 
-@recompile_invalidations begin
-    function Base.getproperty(virtual::Virtual, field::Symbol)
-        try
-            (field == :var) && (return getfield(virtual, :_ccoc).variables)
-            (field == :con) && (return getfield(virtual, :_ccoc).constraints)
-            (field == :exp) && (return getfield(virtual, :_ccoc).expressions)
-            (field == :obj) && (return getfield(virtual, :_ccoc).objectives)
+function Base.getproperty(virtual::Virtual, field::Symbol)
+    try
+        (field == :var) && (return getfield(virtual, :_ccoc).variables)
+        (field == :con) && (return getfield(virtual, :_ccoc).constraints)
+        (field == :exp) && (return getfield(virtual, :_ccoc).expressions)
+        (field == :obj) && (return getfield(virtual, :_ccoc).objectives)
 
-            parameters = getfield(virtual, :_parameters)
-            model = getfield(virtual, :model)
+        parameters = getfield(virtual, :_parameters)
+        model = getfield(virtual, :model)
 
-            # Helper functions for "object-oriented" calling inside templates.
-            (field == :get) && (return (p, args...) -> _get_parameter_safe(p, parameters, args...))
-            (field == :set) && (return (p::String, v::Any) -> _set_parameter_safe(p, v, parameters))
-            (field == :get_ts) && (return (p, args...) -> _get_timeseries_safe(p, parameters, model))
-            (field == :set_ts) && (return (p::String, v::Any) -> _set_timeseries_safe(p, v, parameters, model))
+        # Helper functions for "object-oriented" calling inside templates.
+        (field == :get) && (return (p, args...) -> _get_parameter_safe(p, parameters, args...))
+        (field == :set) && (return (p::String, v::Any) -> _set_parameter_safe(p, v, parameters))
+        (field == :get_ts) && (return (p, args...) -> _get_timeseries_safe(p, parameters, model))
+        (field == :set_ts) && (return (p::String, v::Any) -> _set_timeseries_safe(p, v, parameters, model))
 
-            # See if we may be trying to find a component that is "inside" this Virtual?
-            cname = "$(getfield(virtual, :name)).$field"
-            haskey(internal(model).model.components, cname) && return get_component(model, cname)
+        # See if we may be trying to find a component that is "inside" this Virtual?
+        cname = "$(getfield(virtual, :name)).$field"
+        haskey(internal(model).model.components, cname) && return get_component(model, cname)
 
-            return getfield(virtual, field)
-        catch e
-            @error "Field not found in Virtual" e
-            return nothing
-        end
+        return getfield(virtual, field)
+    catch e
+        @error "Field not found in Virtual" e
+        return nothing
+    end
+end
+
+function Base.setproperty!(virtual::Virtual, field::Symbol, value)
+    if field in [:get, :set, :get_ts, :set_ts]
+        @error "Field name is reserved for internal use of Virtual" name = virtual.name field
+        return nothing
     end
 
-    function Base.setproperty!(virtual::Virtual, field::Symbol, value)
-        if field in [:get, :set, :get_ts, :set_ts]
-            @error "Field name is reserved for internal use of Virtual" name = virtual.name field
-            return nothing
-        end
+    return setfield!(virtual, field, value)
+end
 
-        return setfield!(virtual, field, value)
+function Base.propertynames(virtual::Virtual)
+    prefix = "$(getfield(virtual, :name))."
+    sub_components = Symbol[]
+    for cname in keys(internal(virtual.model).model.components)
+        startswith(cname, prefix) || continue
+        push!(sub_components, Symbol(split(cname, prefix)[2]))
     end
 
-    function Base.propertynames(virtual::Virtual)
-        prefix = "$(getfield(virtual, :name))."
-        sub_components = Symbol[]
-        for cname in keys(internal(virtual.model).model.components)
-            startswith(cname, prefix) || continue
-            push!(sub_components, Symbol(split(cname, prefix)[2]))
-        end
-
-        return (:model, :name, :type, :exp, :var, :con, :obj, sub_components...)
-    end
+    return (:model, :name, :type, :exp, :var, :con, :obj, sub_components...)
 end

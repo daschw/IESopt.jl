@@ -264,23 +264,21 @@ _isfixed(e::Expression) = (
 )::Bool
 _isempty(e::Expression) = e.empty::Bool
 
-@recompile_invalidations begin
-    function Base.show(io::IO, e::Expression)
-        str_show = """:: Expression ::"""
+function Base.show(io::IO, e::Expression)
+    str_show = """:: Expression ::"""
 
-        str_show *= "\n├ name: $(_name(e))"
-        str_show *= "\n├ dirty: $(e.dirty)"
-        str_show *= "\n├ temporal: $(e.temporal)"
-        str_show *= "\n├ value type: $(typeof(e.value))"
+    str_show *= "\n├ name: $(_name(e))"
+    str_show *= "\n├ dirty: $(e.dirty)"
+    str_show *= "\n├ temporal: $(e.temporal)"
+    str_show *= "\n├ value type: $(typeof(e.value))"
 
-        if !isnothing(e.internal)
-            str_show *= "\n└ internal: $(hasproperty(e.internal, :val) ? e.internal.val : "func($(join(e.internal.elements, ", ")))")"
-        else
-            str_show *= "\n└ internal: -"
-        end
-
-        return print(io, str_show)
+    if !isnothing(e.internal)
+        str_show *= "\n└ internal: $(hasproperty(e.internal, :val) ? e.internal.val : "func($(join(e.internal.elements, ", ")))")"
+    else
+        str_show *= "\n└ internal: -"
     end
+
+    return print(io, str_show)
 end
 
 _convert_to_expression(model::JuMP.Model, ::Nothing) = Expression(; model, empty=true)

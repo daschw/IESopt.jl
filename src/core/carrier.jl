@@ -19,9 +19,7 @@ but also enables modelling commodities that are not (treated as) representing so
     color::Union{String, Nothing} = nothing
 end
 
-@recompile_invalidations begin
-    Base.hash(carrier::Carrier) = hash(carrier.name)
-end
+Base.hash(carrier::Carrier) = hash(carrier.name)
 
 """
     _parse_carriers(carriers::Dict{String, Any})
@@ -44,6 +42,4 @@ end
 #     )
 # end
 
-@recompile_invalidations begin
-    Base.string(carrier::Carrier) = carrier.name
-end
+Base.string(carrier::Carrier) = carrier.name

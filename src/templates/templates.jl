@@ -5,30 +5,27 @@ include("functions/functions.jl")
 include("load.jl")
 include("parse.jl")
 
-@recompile_invalidations begin
-    function Base.show(io::IO, template::CoreTemplate)
-        info = _analyse(template)
+function Base.show(io::IO, template::CoreTemplate)
+    info = _analyse(template)
 
-        beautify(value::Any) = value
-        beautify(value::Vector) =
-            isempty(value) ? "-" :
-            (length(value) <= 4 ? join(value, ", ") : "$(value[1]), $(value[2]), ..., $(value[end])")
+    beautify(value::Any) = value
+    beautify(value::Vector) =
+        isempty(value) ? "-" : (length(value) <= 4 ? join(value, ", ") : "$(value[1]), $(value[2]), ..., $(value[end])")
 
-        str_show = ":: IESopt.Template ::"
+    str_show = ":: IESopt.Template ::"
 
-        ks = collect(keys(info))
-        for k in ks[1:(end - 1)]
-            v = info[k]
-            (k == "docs") && (v = collect(keys(info[k])))
-            (k == "parameters") && (v = [p for p in keys(info[k]) if !startswith(p, "_")])
-            str_show *= "\n├ $k: $(beautify(v))"
-        end
-        k = ks[end]
-        v = (k in ["docs", "parameters"]) ? collect(keys(info[k])) : info[k]
-        str_show *= "\n└ $k: $(beautify(v))"
-
-        return print(io, str_show)
+    ks = collect(keys(info))
+    for k in ks[1:(end - 1)]
+        v = info[k]
+        (k == "docs") && (v = collect(keys(info[k])))
+        (k == "parameters") && (v = [p for p in keys(info[k]) if !startswith(p, "_")])
+        str_show *= "\n├ $k: $(beautify(v))"
     end
+    k = ks[end]
+    v = (k in ["docs", "parameters"]) ? collect(keys(info[k])) : info[k]
+    str_show *= "\n└ $k: $(beautify(v))"
+
+    return print(io, str_show)
 end
 
 function _analyse(template::CoreTemplate)
