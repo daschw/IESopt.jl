@@ -951,12 +951,4 @@ end
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
-@static if @load_preference("precompile_traced", @load_preference("precompile", true))
-    include("precompile/precompile_traced.jl")
-end
-
-@static if @load_preference("precompile_tools", @load_preference("precompile", true))
-    include("precompile/precompile_tools.jl")
-end
-
 end

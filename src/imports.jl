@@ -4,8 +4,6 @@ using Preferences: @load_preference
     __precompile__(false)
 end
 
-using PrecompileTools: @setup_workload, @compile_workload, @recompile_invalidations
-
 # See: https://discourse.julialang.org/t/base-docs-doc-failing-with-1-11-0/121187
 # This is a workaround for an issue introduced by Julia 1.11.0, and seems to now be necessary to use `Base.Docs`
 # import REPL
