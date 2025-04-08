@@ -7,5 +7,6 @@
 /docs/Manifest.toml
 /docs/build/
 /docs/src/pages/changelog.md
+/test/Manifest.toml
 
 LocalPreferences.toml
